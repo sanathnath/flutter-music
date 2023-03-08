@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart' as rxdart;
 
 import '../models/song_model.dart';
+import '../widgets/player_buttons.dart';
 import '../widgets/seekbar.dart';
 
 class ScreenSong extends StatefulWidget {
@@ -14,7 +16,7 @@ class ScreenSong extends StatefulWidget {
 
 class _ScreenSongState extends State<ScreenSong> {
   AudioPlayer audioPlayer = AudioPlayer();
-  Song song = Song.songs[0];
+  Song song = Get.arguments ?? Song.songs[0];
 
   @override
   void initState() {
@@ -59,7 +61,9 @@ class _ScreenSongState extends State<ScreenSong> {
           ),
           const _BackgroundFilter(),
           _MusicPlayer(
-              seekBarDataStream: _seekBarDataStream, audioPlayer: audioPlayer)
+              song: song,
+              seekBarDataStream: _seekBarDataStream,
+              audioPlayer: audioPlayer)
         ],
       ),
     );
@@ -69,11 +73,13 @@ class _ScreenSongState extends State<ScreenSong> {
 class _MusicPlayer extends StatelessWidget {
   const _MusicPlayer({
     Key? key,
+    required this.song,
     required Stream<SeekBarData> seekBarDataStream,
     required this.audioPlayer,
   })  : _seekBarDataStream = seekBarDataStream,
         super(key: key);
 
+  final Song song;
   final Stream<SeekBarData> _seekBarDataStream;
   final AudioPlayer audioPlayer;
 
@@ -82,12 +88,31 @@ class _MusicPlayer extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: 20.0,
-        vertical: 40.0,
+        vertical: 50.0,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            song.title,
+            style: Theme.of(context).textTheme.headlineSmall!.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(
+            height: 10,
+          ),
+          Text(
+            song.description,
+            maxLines: 2,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall!
+                .copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 30,),
           StreamBuilder<SeekBarData>(
             stream: _seekBarDataStream,
             builder: (context, snapshot) {
@@ -102,70 +127,6 @@ class _MusicPlayer extends StatelessWidget {
           PlayerButtons(audioPlayer: audioPlayer)
         ],
       ),
-    );
-  }
-}
-
-class PlayerButtons extends StatelessWidget {
-  const PlayerButtons({
-    Key? key,
-    required this.audioPlayer,
-  }) : super(key: key);
-
-  final AudioPlayer audioPlayer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        StreamBuilder(
-            stream: audioPlayer.playerStateStream,
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                final playerState = snapshot.data;
-                final processingState =
-                    (playerState! as PlayerState).processingState;
-
-                if (processingState == ProcessingState.loading ||
-                    processingState == ProcessingState.buffering) {
-                  return Container(
-                    width: 64,
-                    height: 64,
-                    margin: const EdgeInsets.all(10),
-                    child: const CircularProgressIndicator(),
-                  );
-                } else if (!audioPlayer.playing) {
-                  return IconButton(
-                      onPressed: audioPlayer.play,
-                      iconSize: 75,
-                      icon: const Icon(
-                        Icons.play_circle,
-                        color: Colors.white,
-                      ));
-                }else if(processingState != ProcessingState.completed){
-                    return IconButton(
-                      onPressed: audioPlayer.pause,
-                      iconSize: 75,
-                      icon: const Icon(
-                        Icons.pause_circle,
-                        color: Colors.white,
-                      ));
-                }else{
-                    return IconButton(
-                        onPressed: () => audioPlayer.seek(
-                          Duration.zero, 
-                          index: audioPlayer.effectiveIndices!.first),
-                        iconSize: 75,
-                        icon: const Icon(
-                          Icons.replay_circle_filled_outlined,
-                          color: Colors.white,
-                        ));
-                }
-              }else{
-                return const CircularProgressIndicator();
-              }
-            })
-      ],
     );
   }
 }
